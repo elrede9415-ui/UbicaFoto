@@ -158,6 +158,40 @@
       align-items: flex-start;
     }
 
+    .kmz-option {
+      margin-top: 12px;
+      padding: 11px 13px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #f8fbfa;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .kmz-option input {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--primary);
+      flex: 0 0 auto;
+    }
+
+    .kmz-option span {
+      color: var(--text);
+      font-size: .9rem;
+      font-weight: 750;
+      line-height: 1.25;
+    }
+
+    .kmz-option small {
+      display: block;
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
     .toolbar {
       display: flex;
       flex-wrap: wrap;
@@ -325,6 +359,23 @@
       background: #fff;
     }
 
+    .note-input {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 7px 10px;
+      background: #fbfdfc;
+      color: var(--text);
+      outline: none;
+    }
+
+    .note-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(23,107,85,.10);
+      background: #fff;
+    }
+
     .original-file {
       color: var(--muted);
       font-size: .76rem;
@@ -436,9 +487,17 @@
       </label>
 
       <div class="notice">
-        Selecciona el archivo original de la carpeta DCIM/Camera. Después puedes cambiar el nombre de cada punto; ese nombre se usará al compartir y dentro del KMZ. Ahora el KMZ también puede incluir la foto dentro de cada marcador en Google Earth.
+        Selecciona el archivo original de la carpeta DCIM/Camera. Puedes cambiar el nombre, agregar una nota y decidir si el KMZ incluye las fotos.
       </div>
       <div class="privacy">🔒 <span>Las fotografías se procesan dentro de este dispositivo. La app no las envía a un servidor.</span></div>
+
+      <label class="kmz-option" for="includePhotosKmz">
+        <input id="includePhotosKmz" type="checkbox" checked />
+        <span>
+          Incluir fotos dentro del KMZ
+          <small>Desactívalo para crear un archivo más ligero.</small>
+        </span>
+      </label>
 
       <div class="progress-wrap" id="progressWrap">
         <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
@@ -481,7 +540,7 @@
       <div id="photoList" class="photo-list"></div>
     </section>
 
-    <footer>UbicaFoto · Versión 1.1</footer>
+    <footer>UbicaFoto · Versión 1.3</footer>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
@@ -511,6 +570,7 @@
         kmlBtn: document.getElementById("kmlBtn"),
         fitBtn: document.getElementById("fitBtn"),
         shareAllBtn: document.getElementById("shareAllBtn"),
+        includePhotosKmz: document.getElementById("includePhotosKmz"),
         totalCount: document.getElementById("totalCount"),
         gpsCount: document.getElementById("gpsCount"),
         noGpsCount: document.getElementById("noGpsCount"),
@@ -982,6 +1042,7 @@
           source: metadata?.source || null,
           diagnostic: metadata?.diagnostic || error || "No se encontraron metadatos de ubicación.",
           displayName: "",
+          note: "",
           error
         };
       }
@@ -1021,6 +1082,7 @@
         marker.bindPopup(`
           <div style="min-width:190px">
             <strong>${escapeHtml(photo.displayName || photo.name)}</strong><br>
+            ${photo.note ? `<span>${escapeHtml(photo.note)}</span><br>` : ""}
             <span>${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}</span><br>
             <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer">Abrir en Google Maps</a>
           </div>
@@ -1040,9 +1102,10 @@
         const mapsUrl = `https://www.google.com/maps?q=${photo.latitude},${photo.longitude}`;
         return [
           `${photo.displayName || photo.name}`,
+          photo.note ? `Nota: ${photo.note}` : "",
           `${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}`,
           mapsUrl
-        ].join("\n");
+        ].filter(Boolean).join("\n");
       }
 
       async function shareLocation(photo) {
@@ -1051,7 +1114,11 @@
         const mapsUrl = `https://www.google.com/maps?q=${photo.latitude},${photo.longitude}`;
         const shareData = {
           title: `${photo.displayName || photo.name}`,
-          text: `${photo.displayName || photo.name}: ${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}`,
+          text: [
+            `${photo.displayName || photo.name}`,
+            photo.note ? `Nota: ${photo.note}` : "",
+            `${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}`
+          ].filter(Boolean).join("\n"),
           url: mapsUrl
         };
 
@@ -1095,9 +1162,10 @@
           const mapsUrl = `https://www.google.com/maps?q=${photo.latitude},${photo.longitude}`;
           return [
             `${index + 1}. ${photo.displayName || photo.name}`,
+            photo.note ? `Nota: ${photo.note}` : "",
             `${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}`,
             mapsUrl
-          ].join("\n");
+          ].filter(Boolean).join("\n");
         }).join("\n\n");
 
         const shareData = {
@@ -1156,6 +1224,16 @@
                   placeholder="Ej. Casa en venta Hidalgo 513"
                 />
                 <div class="original-file">Archivo original: ${escapeHtml(photo.name)}</div>
+                <label for="note-${photo.id}" style="margin-top:8px;">Nota opcional</label>
+                <input
+                  id="note-${photo.id}"
+                  class="note-input"
+                  type="text"
+                  maxlength="180"
+                  data-id="${photo.id}"
+                  value="${escapeHtml(photo.note || "")}"
+                  placeholder="Ej. Fachada principal o acceso cerrado"
+                />
               </div>
               <div class="meta">
                 ${escapeHtml(locationText)}<br>
@@ -1253,6 +1331,7 @@
           const imagePath = imageMap.get(photo.id) || "";
           const descriptionParts = [
             `<b>Nombre:</b> ${escapeHtml(photo.displayName || photo.name)}`,
+            photo.note ? `<b>Nota:</b> ${escapeHtml(photo.note)}` : "",
             `<b>Archivo original:</b> ${escapeHtml(photo.name)}`,
             `<b>Coordenadas:</b> ${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}`,
             `<b>Fecha:</b> ${escapeHtml(formatDate(photo.date))}`,
@@ -1265,7 +1344,7 @@
             );
           }
 
-          const description = descriptionParts.join("<br>");
+          const description = descriptionParts.filter(Boolean).join("<br>");
 
           return `
     <Placemark>
@@ -1312,11 +1391,15 @@ ${placemarks}
         const points = state.photos.filter(photo => photo.hasGps);
         const imageMap = new Map();
 
-        points.forEach((photo, index) => {
-          const assetName = getKmzImageAssetName(photo, index);
-          imageMap.set(photo.id, assetName);
-          if (photo.file) zip.file(assetName, photo.file);
-        });
+        const includePhotos = els.includePhotosKmz?.checked !== false;
+
+        if (includePhotos) {
+          points.forEach((photo, index) => {
+            const assetName = getKmzImageAssetName(photo, index);
+            imageMap.set(photo.id, assetName);
+            if (photo.file) zip.file(assetName, photo.file);
+          });
+        }
 
         zip.file("doc.kml", makeKml(imageMap));
         return zip.generateAsync({
@@ -1417,13 +1500,16 @@ ${placemarks}
       els.shareKmzBtn.addEventListener("click", shareKmz);
 
       els.photoList.addEventListener("input", event => {
-        const input = event.target.closest(".share-name-input");
+        const nameInput = event.target.closest(".share-name-input");
+        const noteInput = event.target.closest(".note-input");
+        const input = nameInput || noteInput;
         if (!input) return;
 
         const photo = state.photos.find(item => item.id === input.dataset.id);
         if (!photo) return;
 
-        photo.displayName = input.value.trim() || photo.name;
+        if (nameInput) photo.displayName = nameInput.value.trim() || photo.name;
+        if (noteInput) photo.note = noteInput.value.trim();
 
         const marker = state.markersById.get(photo.id);
         if (marker && photo.hasGps) {
@@ -1431,6 +1517,7 @@ ${placemarks}
           marker.setPopupContent(`
             <div style="min-width:190px">
               <strong>${escapeHtml(photo.displayName || photo.name)}</strong><br>
+              ${photo.note ? `<span>${escapeHtml(photo.note)}</span><br>` : ""}
               <span>${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}</span><br>
               <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer">Abrir en Google Maps</a>
             </div>
