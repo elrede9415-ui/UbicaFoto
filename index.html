@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#173f35" />
+  <meta name="description" content="Extrae la ubicación GPS de fotografías, compártela y expórtala a KML o KMZ." />
+  <meta name="application-name" content="UbicaFoto" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="UbicaFoto" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <title>UbicaFoto</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin="" />
+
+  <style>
+    :root {
+      --bg: #f3f6f5;
+      --card: #ffffff;
+      --text: #16231f;
+      --muted: #64736d;
+      --primary: #176b55;
+      --primary-dark: #104d3e;
+      --border: #dce6e2;
+      --ok: #177245;
+      --warn: #9a6411;
+      --bad: #b33a3a;
+      --shadow: 0 10px 30px rgba(17, 53, 44, .09);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, rgba(23,107,85,.10), transparent 32rem),
+        var(--bg);
+    }
+
+    button, input { font: inherit; }
+
+    .app {
+      width: min(1100px, calc(100% - 24px));
+      margin: 0 auto;
+      padding: 20px 0 48px;
+    }
+
+    header {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .logo {
+      width: 56px;
+      height: 56px;
+      display: block;
+      border-radius: 17px;
+      box-shadow: var(--shadow);
+      object-fit: cover;
+      flex: 0 0 auto;
+    }
+
+    h1 { margin: 0; font-size: clamp(1.45rem, 5vw, 2rem); }
+    .subtitle { margin: 3px 0 0; color: var(--muted); }
+
+    .panel {
+      background: rgba(255,255,255,.92);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+
+    .project-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      color: var(--muted);
+      font-size: .88rem;
+      font-weight: 650;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0 13px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(23,107,85,.12);
+    }
+
+    .dropzone {
+      border: 2px dashed #9dbab0;
+      border-radius: 16px;
+      min-height: 170px;
+      padding: 22px 16px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      background: #f9fcfb;
+      cursor: pointer;
+      transition: .18s ease;
+    }
+
+    .dropzone:hover,
+    .dropzone.dragover {
+      border-color: var(--primary);
+      background: #eff8f5;
+      transform: translateY(-1px);
+    }
+
+    .drop-icon { font-size: 38px; }
+    .drop-title { font-size: 1.05rem; font-weight: 750; margin-top: 6px; }
+    .drop-help { color: var(--muted); font-size: .9rem; margin-top: 5px; }
+    #fileInput { display: none; }
+
+    .notice {
+      margin-top: 12px;
+      padding: 11px 13px;
+      border-radius: 12px;
+      background: #fff7e8;
+      color: #765011;
+      font-size: .9rem;
+      line-height: 1.4;
+    }
+
+    .privacy {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: .86rem;
+      display: flex;
+      gap: 7px;
+      align-items: flex-start;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 14px;
+    }
+
+    button, .button-link {
+      min-height: 42px;
+      border: 0;
+      border-radius: 11px;
+      padding: 9px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: .15s ease;
+    }
+
+    button:hover, .button-link:hover { transform: translateY(-1px); }
+    button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+    .primary { background: var(--primary); color: white; }
+    .secondary { background: #e9f2ef; color: var(--primary-dark); }
+    .danger { background: #faeaea; color: var(--bad); }
+    .ghost { background: #f1f4f3; color: #42514c; }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .stat {
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: #fbfdfc;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.45rem;
+      margin-bottom: 2px;
+    }
+
+    .stat span { color: var(--muted); font-size: .84rem; }
+
+    .progress-wrap {
+      display: none;
+      margin-top: 13px;
+    }
+
+    .progress-track {
+      height: 9px;
+      background: #e4ece9;
+      overflow: hidden;
+      border-radius: 999px;
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 100%;
+      background: var(--primary);
+      transition: width .18s ease;
+    }
+
+    .progress-text {
+      color: var(--muted);
+      font-size: .84rem;
+      margin-top: 6px;
+    }
+
+    #map {
+      height: min(56vh, 490px);
+      min-height: 300px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #e8efec;
+    }
+
+    .section-title {
+      margin: 0 0 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .section-title h2 { margin: 0; font-size: 1.08rem; }
+    .count-pill {
+      color: var(--primary-dark);
+      background: #e9f2ef;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 750;
+    }
+
+    .empty {
+      padding: 28px 15px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+    }
+
+    .photo-list {
+      display: grid;
+      gap: 11px;
+    }
+
+    .photo-card {
+      display: grid;
+      grid-template-columns: 84px minmax(0, 1fr) auto;
+      gap: 13px;
+      align-items: center;
+      padding: 11px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .thumb {
+      width: 84px;
+      height: 74px;
+      border-radius: 10px;
+      object-fit: cover;
+      background: #edf2f0;
+    }
+
+    .photo-name {
+      font-weight: 750;
+      overflow-wrap: anywhere;
+      margin-bottom: 5px;
+    }
+
+    .share-name-wrap {
+      margin: 9px 0 7px;
+    }
+
+    .share-name-wrap label {
+      margin-bottom: 4px;
+      font-size: .78rem;
+    }
+
+    .share-name-input {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 7px 10px;
+      background: #fbfdfc;
+      color: var(--text);
+      font-weight: 700;
+      outline: none;
+    }
+
+    .share-name-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(23,107,85,.10);
+      background: #fff;
+    }
+
+    .original-file {
+      color: var(--muted);
+      font-size: .76rem;
+      overflow-wrap: anywhere;
+      margin-top: 3px;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: .84rem;
+      line-height: 1.45;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: .76rem;
+      font-weight: 750;
+      margin-top: 7px;
+    }
+
+    .status.ok { background: #e6f5ed; color: var(--ok); }
+    .status.bad { background: #faeaea; color: var(--bad); }
+
+    .card-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      min-width: 120px;
+    }
+
+    .card-actions button,
+    .card-actions a {
+      min-height: 37px;
+      padding: 7px 10px;
+      font-size: .82rem;
+    }
+
+    .error-box {
+      display: none;
+      margin-top: 12px;
+      color: var(--bad);
+      background: #fff0f0;
+      border: 1px solid #f2cdcd;
+      padding: 11px 13px;
+      border-radius: 12px;
+      font-size: .9rem;
+    }
+
+    footer {
+      color: var(--muted);
+      text-align: center;
+      font-size: .8rem;
+      padding-top: 8px;
+    }
+
+    @media (max-width: 720px) {
+      .app { width: min(100% - 16px, 1100px); padding-top: 12px; }
+      .panel { padding: 14px; border-radius: 16px; }
+      .project-row { grid-template-columns: 1fr; }
+      .project-row > button { width: 100%; }
+      .summary { grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+      .stat { padding: 11px 9px; text-align: center; }
+      .stat strong { font-size: 1.22rem; }
+      .photo-card {
+        grid-template-columns: 72px minmax(0, 1fr);
+        align-items: start;
+      }
+      .thumb { width: 72px; height: 70px; }
+      .card-actions {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        min-width: 0;
+      }
+      #map { min-height: 330px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <img class="logo" src="icons/icon-192.png" alt="Icono de UbicaFoto" />
+      <div>
+        <h1>UbicaFoto</h1>
+        <p class="subtitle">Ubica tus fotos, compártelas y expórtalas a Google Earth.</p>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="project-row">
+        <div>
+          <label for="projectName">Nombre del levantamiento o inmueble</label>
+          <input id="projectName" type="text" value="Ubicaciones de fotografías" maxlength="100" />
+        </div>
+        <button id="clearBtn" class="danger" type="button" disabled>🗑️ Limpiar</button>
+      </div>
+
+      <label class="dropzone" id="dropzone" for="fileInput">
+        <input id="fileInput" type="file" multiple />
+        <div>
+          <div class="drop-icon">📷</div>
+          <div class="drop-title">Seleccionar archivos de fotografía</div>
+          <div class="drop-help">Se abrirá el gestor de archivos del teléfono. Selecciona los archivos originales de la cámara.</div>
+        </div>
+      </label>
+
+      <div class="notice">
+        Selecciona el archivo original de la carpeta DCIM/Camera. Después puedes cambiar el nombre de cada punto; ese nombre se usará al compartir y dentro del KMZ.
+      </div>
+      <div class="privacy">🔒 <span>Las fotografías se procesan dentro de este dispositivo. La app no las envía a un servidor.</span></div>
+
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+        <div class="progress-text" id="progressText">Procesando…</div>
+      </div>
+
+      <div class="error-box" id="errorBox"></div>
+
+      <div class="toolbar">
+        <button id="kmzBtn" class="primary" type="button" disabled>🌎 Descargar KMZ</button>
+        <button id="kmlBtn" class="secondary" type="button" disabled>📄 Descargar KML</button>
+        <button id="fitBtn" class="ghost" type="button" disabled>🗺️ Ver todos los puntos</button>
+        <button id="shareAllBtn" class="secondary" type="button" disabled>📤 Compartir ubicaciones</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="summary">
+        <div class="stat"><strong id="totalCount">0</strong><span>Fotos revisadas</span></div>
+        <div class="stat"><strong id="gpsCount">0</strong><span>Con ubicación</span></div>
+        <div class="stat"><strong id="noGpsCount">0</strong><span>Sin GPS</span></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <h2>Mapa de ubicaciones</h2>
+        <span class="count-pill" id="mapCount">0 puntos</span>
+      </div>
+      <div id="map"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <h2>Fotografías procesadas</h2>
+        <span class="count-pill" id="listCount">0 fotos</span>
+      </div>
+      <div id="emptyState" class="empty">Todavía no has seleccionado archivos de fotografía.</div>
+      <div id="photoList" class="photo-list"></div>
+    </section>
+
+    <footer>UbicaFoto · Versión 1.0</footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin=""></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const state = {
+        photos: [],
+        markerLayer: null,
+        markersById: new Map(),
+        processing: false
+      };
+
+      const els = {
+        input: document.getElementById("fileInput"),
+        dropzone: document.getElementById("dropzone"),
+        projectName: document.getElementById("projectName"),
+        clearBtn: document.getElementById("clearBtn"),
+        kmzBtn: document.getElementById("kmzBtn"),
+        kmlBtn: document.getElementById("kmlBtn"),
+        fitBtn: document.getElementById("fitBtn"),
+        shareAllBtn: document.getElementById("shareAllBtn"),
+        totalCount: document.getElementById("totalCount"),
+        gpsCount: document.getElementById("gpsCount"),
+        noGpsCount: document.getElementById("noGpsCount"),
+        mapCount: document.getElementById("mapCount"),
+        listCount: document.getElementById("listCount"),
+        photoList: document.getElementById("photoList"),
+        emptyState: document.getElementById("emptyState"),
+        progressWrap: document.getElementById("progressWrap"),
+        progressBar: document.getElementById("progressBar"),
+        progressText: document.getElementById("progressText"),
+        errorBox: document.getElementById("errorBox")
+      };
+
+      const map = L.map("map", { zoomControl: true }).setView([25.6866, -100.3161], 10);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+
+      state.markerLayer = L.featureGroup().addTo(map);
+
+      function uniqueId() {
+        return crypto.randomUUID ? crypto.randomUUID() :
+          `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function escapeXml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&apos;");
+      }
+
+      function safeFileName(value) {
+        return String(value || "ubicaciones")
+          .trim()
+          .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_")
+          .replace(/\s+/g, " ")
+          .slice(0, 100) || "ubicaciones";
+      }
+
+      function formatCoordinate(value) {
+        return Number(value).toFixed(7);
+      }
+
+      function formatDate(value) {
+        if (!value) return "Fecha no disponible";
+        const date = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        return new Intl.DateTimeFormat("es-MX", {
+          dateStyle: "medium",
+          timeStyle: "short"
+        }).format(date);
+      }
+
+      function showError(message) {
+        els.errorBox.textContent = message;
+        els.errorBox.style.display = "block";
+      }
+
+      function clearError() {
+        els.errorBox.textContent = "";
+        els.errorBox.style.display = "none";
+      }
+
+      function setProgress(current, total, fileName = "") {
+        if (!total) {
+          els.progressWrap.style.display = "none";
+          return;
+        }
+        const percent = Math.round((current / total) * 100);
+        els.progressWrap.style.display = "block";
+        els.progressBar.style.width = `${percent}%`;
+        els.progressText.textContent =
+          current < total ? `Procesando ${current + 1} de ${total}: ${fileName}` : `Listo: ${total} fotografías revisadas`;
+      }
+
+      function parseExifDate(value) {
+        if (!value) return null;
+        if (value instanceof Date) return value;
+
+        const stringValue = String(value).trim();
+        const match = stringValue.match(
+          /^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/
+        );
+
+        if (match) {
+          const [, year, month, day, hour, minute, second] = match;
+          return new Date(
+            Number(year),
+            Number(month) - 1,
+            Number(day),
+            Number(hour),
+            Number(minute),
+            Number(second)
+          );
+        }
+
+        const parsed = new Date(stringValue);
+        return Number.isNaN(parsed.getTime()) ? stringValue : parsed;
+      }
+
+      function parseXmpCoordinate(rawValue) {
+        if (!rawValue) return null;
+
+        let value = String(rawValue).trim().toUpperCase();
+        const directionMatch = value.match(/[NSEW]$/);
+        const direction = directionMatch ? directionMatch[0] : "";
+        value = value.replace(/[NSEW]/g, "").trim();
+
+        const numbers = value
+          .split(/[,\s]+/)
+          .map(Number)
+          .filter(Number.isFinite);
+
+        if (!numbers.length) return null;
+
+        let coordinate;
+        if (numbers.length >= 3) {
+          coordinate = numbers[0] + numbers[1] / 60 + numbers[2] / 3600;
+        } else if (numbers.length === 2) {
+          coordinate = numbers[0] + numbers[1] / 60;
+        } else {
+          coordinate = numbers[0];
+        }
+
+        if (direction === "S" || direction === "W") coordinate *= -1;
+        return coordinate;
+      }
+
+      function parseXmpFallback(arrayBuffer) {
+        try {
+          const sample = arrayBuffer.slice(0, Math.min(arrayBuffer.byteLength, 2_500_000));
+          const xml = new TextDecoder("utf-8", { fatal: false }).decode(sample);
+
+          const readValue = name => {
+            const attribute = xml.match(
+              new RegExp(`(?:exif:)?${name}\\s*=\\s*["']([^"']+)["']`, "i")
+            );
+            if (attribute) return attribute[1];
+
+            const element = xml.match(
+              new RegExp(`<(?:exif:)?${name}[^>]*>([^<]+)<\\/`, "i")
+            );
+            return element ? element[1] : null;
+          };
+
+          const latitude = parseXmpCoordinate(readValue("GPSLatitude"));
+          const longitude = parseXmpCoordinate(readValue("GPSLongitude"));
+          const date = readValue("DateTimeOriginal") || readValue("CreateDate");
+
+          if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+            return {
+              latitude,
+              longitude,
+              date: parseExifDate(date),
+              source: "XMP"
+            };
+          }
+        } catch (error) {
+          console.warn("No se pudo revisar XMP:", error);
+        }
+
+        return null;
+      }
+
+      function parseJpegExif(arrayBuffer) {
+        const view = new DataView(arrayBuffer);
+        const result = {
+          latitude: null,
+          longitude: null,
+          date: null,
+          source: null,
+          diagnostic: "No se encontró un bloque EXIF con GPS."
+        };
+
+        if (view.byteLength < 4 ||
+            view.getUint8(0) !== 0xFF ||
+            view.getUint8(1) !== 0xD8) {
+          result.diagnostic = "El archivo no tiene estructura JPEG compatible.";
+          return result;
+        }
+
+        const typeSize = {
+          1: 1,  // BYTE
+          2: 1,  // ASCII
+          3: 2,  // SHORT
+          4: 4,  // LONG
+          5: 8,  // RATIONAL
+          7: 1,  // UNDEFINED
+          9: 4,  // SLONG
+          10: 8  // SRATIONAL
+        };
+
+        let offset = 2;
+
+        while (offset + 4 <= view.byteLength) {
+          if (view.getUint8(offset) !== 0xFF) {
+            offset += 1;
+            continue;
+          }
+
+          const marker = view.getUint8(offset + 1);
+          offset += 2;
+
+          // SOS: image data starts here; EXIF should already have appeared.
+          if (marker === 0xDA || marker === 0xD9) break;
+
+          // Markers without payload.
+          if (marker === 0x01 || (marker >= 0xD0 && marker <= 0xD8)) continue;
+          if (offset + 2 > view.byteLength) break;
+
+          const segmentLength = view.getUint16(offset, false);
+          if (segmentLength < 2 || offset + segmentLength > view.byteLength) break;
+
+          const dataStart = offset + 2;
+          const isExif =
+            marker === 0xE1 &&
+            dataStart + 6 <= view.byteLength &&
+            view.getUint8(dataStart) === 0x45 &&
+            view.getUint8(dataStart + 1) === 0x78 &&
+            view.getUint8(dataStart + 2) === 0x69 &&
+            view.getUint8(dataStart + 3) === 0x66 &&
+            view.getUint8(dataStart + 4) === 0x00 &&
+            view.getUint8(dataStart + 5) === 0x00;
+
+          if (isExif) {
+            try {
+              const tiffStart = dataStart + 6;
+              if (tiffStart + 8 > view.byteLength) throw new Error("Cabecera TIFF incompleta.");
+
+              const byteOrder = view.getUint16(tiffStart, false);
+              const littleEndian =
+                byteOrder === 0x4949 ? true :
+                byteOrder === 0x4D4D ? false :
+                null;
+
+              if (littleEndian === null) throw new Error("Orden de bytes EXIF inválido.");
+
+              const getU16 = position => view.getUint16(position, littleEndian);
+              const getU32 = position => view.getUint32(position, littleEndian);
+              const getI32 = position => view.getInt32(position, littleEndian);
+
+              if (getU16(tiffStart + 2) !== 42) {
+                throw new Error("Cabecera TIFF no reconocida.");
+              }
+
+              function readValue(entryOffset, type, count) {
+                const bytes = (typeSize[type] || 0) * count;
+                if (!bytes) return null;
+
+                let valueOffset = entryOffset + 8;
+                if (bytes > 4) {
+                  valueOffset = tiffStart + getU32(entryOffset + 8);
+                }
+
+                if (valueOffset < 0 || valueOffset + bytes > view.byteLength) {
+                  return null;
+                }
+
+                if (type === 2) {
+                  let output = "";
+                  for (let index = 0; index < count; index++) {
+                    const byte = view.getUint8(valueOffset + index);
+                    if (byte === 0) break;
+                    output += String.fromCharCode(byte);
+                  }
+                  return output.trim();
+                }
+
+                const values = [];
+                for (let index = 0; index < count; index++) {
+                  let item = null;
+                  const position = valueOffset + index * (typeSize[type] || 1);
+
+                  if (type === 1 || type === 7) {
+                    item = view.getUint8(position);
+                  } else if (type === 3) {
+                    item = getU16(position);
+                  } else if (type === 4) {
+                    item = getU32(position);
+                  } else if (type === 5) {
+                    const numerator = getU32(position);
+                    const denominator = getU32(position + 4);
+                    item = denominator ? numerator / denominator : 0;
+                  } else if (type === 9) {
+                    item = getI32(position);
+                  } else if (type === 10) {
+                    const numerator = getI32(position);
+                    const denominator = getI32(position + 4);
+                    item = denominator ? numerator / denominator : 0;
+                  }
+
+                  values.push(item);
+                }
+
+                return count === 1 ? values[0] : values;
+              }
+
+              function readIfd(ifdOffset) {
+                const entries = new Map();
+                if (!ifdOffset || ifdOffset + 2 > view.byteLength) return entries;
+
+                const count = getU16(ifdOffset);
+                for (let index = 0; index < count; index++) {
+                  const entryOffset = ifdOffset + 2 + index * 12;
+                  if (entryOffset + 12 > view.byteLength) break;
+
+                  const tag = getU16(entryOffset);
+                  const type = getU16(entryOffset + 2);
+                  const itemCount = getU32(entryOffset + 4);
+                  entries.set(tag, readValue(entryOffset, type, itemCount));
+                }
+                return entries;
+              }
+
+              const ifd0Relative = getU32(tiffStart + 4);
+              const ifd0 = readIfd(tiffStart + ifd0Relative);
+
+              const exifPointer = Number(ifd0.get(0x8769));
+              const gpsPointer = Number(ifd0.get(0x8825));
+              const exifIfd = Number.isFinite(exifPointer)
+                ? readIfd(tiffStart + exifPointer)
+                : new Map();
+              const gpsIfd = Number.isFinite(gpsPointer)
+                ? readIfd(tiffStart + gpsPointer)
+                : new Map();
+
+              const dateRaw =
+                exifIfd.get(0x9003) ||
+                exifIfd.get(0x9004) ||
+                ifd0.get(0x0132) ||
+                null;
+
+              const latitudeRef = String(gpsIfd.get(0x0001) || "").toUpperCase();
+              const longitudeRef = String(gpsIfd.get(0x0003) || "").toUpperCase();
+              const latitudeParts = gpsIfd.get(0x0002);
+              const longitudeParts = gpsIfd.get(0x0004);
+
+              function dmsToDecimal(parts, reference) {
+                if (!Array.isArray(parts) || parts.length < 3) return null;
+                if (!parts.slice(0, 3).every(Number.isFinite)) return null;
+
+                let decimal = parts[0] + parts[1] / 60 + parts[2] / 3600;
+                if (reference === "S" || reference === "W") decimal *= -1;
+                return decimal;
+              }
+
+              const latitude = dmsToDecimal(latitudeParts, latitudeRef);
+              const longitude = dmsToDecimal(longitudeParts, longitudeRef);
+
+              result.date = parseExifDate(dateRaw);
+              result.source = "EXIF";
+
+              if (
+                Number.isFinite(latitude) &&
+                Number.isFinite(longitude) &&
+                latitude >= -90 && latitude <= 90 &&
+                longitude >= -180 && longitude <= 180
+              ) {
+                result.latitude = latitude;
+                result.longitude = longitude;
+                result.diagnostic = "GPS leído directamente del EXIF del archivo.";
+                return result;
+              }
+
+              result.diagnostic = gpsPointer
+                ? "Se encontró EXIF, pero las etiquetas GPS están incompletas."
+                : "Se encontró EXIF, pero el archivo entregado al navegador no contiene el bloque GPS.";
+            } catch (error) {
+              result.diagnostic = `EXIF encontrado, pero no pudo interpretarse: ${error.message}`;
+            }
+          }
+
+          offset += segmentLength;
+        }
+
+        return result;
+      }
+
+      async function extractMetadata(file) {
+        const arrayBuffer = await file.arrayBuffer();
+
+        // Método principal: lector propio para JPEG de cámara.
+        const direct = parseJpegExif(arrayBuffer);
+        if (Number.isFinite(direct.latitude) && Number.isFinite(direct.longitude)) {
+          return direct;
+        }
+
+        // Método de respaldo: librería completa, útil para HEIC y variantes EXIF.
+        if (window.exifr && typeof window.exifr.parse === "function") {
+          try {
+            const metadata = await window.exifr.parse(file, true);
+            const latitude = Number(metadata?.latitude);
+            const longitude = Number(metadata?.longitude);
+            const date =
+              metadata?.DateTimeOriginal ||
+              metadata?.CreateDate ||
+              metadata?.ModifyDate ||
+              direct.date ||
+              null;
+
+            if (
+              Number.isFinite(latitude) &&
+              Number.isFinite(longitude) &&
+              latitude >= -90 && latitude <= 90 &&
+              longitude >= -180 && longitude <= 180
+            ) {
+              return {
+                latitude,
+                longitude,
+                date: parseExifDate(date),
+                source: "EXIF (respaldo)",
+                diagnostic: "GPS leído con el método de respaldo."
+              };
+            }
+          } catch (error) {
+            console.warn("Método EXIF de respaldo:", error);
+          }
+        }
+
+        // Último intento: algunas aplicaciones guardan GPS dentro de XMP.
+        const xmp = parseXmpFallback(arrayBuffer);
+        if (xmp) return xmp;
+
+        return direct;
+      }
+
+      async function readPhoto(file) {
+        let metadata = null;
+        let error = null;
+
+        try {
+          metadata = await extractMetadata(file);
+        } catch (err) {
+          error = err instanceof Error ? err.message : "No fue posible leer los metadatos.";
+        }
+
+        const latitude = Number(metadata?.latitude);
+        const longitude = Number(metadata?.longitude);
+        const hasGps =
+          Number.isFinite(latitude) &&
+          Number.isFinite(longitude) &&
+          latitude >= -90 && latitude <= 90 &&
+          longitude >= -180 && longitude <= 180;
+
+        return {
+          id: uniqueId(),
+          file,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          objectUrl: URL.createObjectURL(file),
+          latitude: hasGps ? latitude : null,
+          longitude: hasGps ? longitude : null,
+          hasGps,
+          date: metadata?.date || null,
+          source: metadata?.source || null,
+          diagnostic: metadata?.diagnostic || error || "No se encontraron metadatos de ubicación.",
+          displayName: "",
+          error
+        };
+      }
+
+      async function processFiles(fileList) {
+        const files = Array.from(fileList || []).filter(file => /\.(jpe?g|heic|heif|png|webp|tif|tiff)$/i.test(file.name));
+        if (!files.length || state.processing) return;
+
+        state.processing = true;
+        clearError();
+        els.input.value = "";
+        toggleControls();
+
+        try {
+          for (let index = 0; index < files.length; index++) {
+            setProgress(index, files.length, files[index].name);
+            const record = await readPhoto(files[index]);
+            record.displayName = `Ubicación ${state.photos.length + 1}`;
+            state.photos.push(record);
+            render();
+          }
+          setProgress(files.length, files.length);
+          setTimeout(() => { els.progressWrap.style.display = "none"; }, 1400);
+        } catch (err) {
+          showError("Ocurrió un error al procesar las fotografías. Intenta seleccionarlas nuevamente.");
+          console.error(err);
+        } finally {
+          state.processing = false;
+          toggleControls();
+          render();
+        }
+      }
+
+      function addMarker(photo) {
+        const marker = L.marker([photo.latitude, photo.longitude]);
+        const mapsUrl = `https://www.google.com/maps?q=${photo.latitude},${photo.longitude}`;
+        marker.bindPopup(`
+          <div style="min-width:190px">
+            <strong>${escapeHtml(photo.displayName || photo.name)}</strong><br>
+            <span>${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}</span><br>
+            <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer">Abrir en Google Maps</a>
+          </div>
+        `);
+        marker.addTo(state.markerLayer);
+        state.markersById.set(photo.id, marker);
+      }
+
+      function rebuildMarkers() {
+        state.markerLayer.clearLayers();
+        state.markersById.clear();
+        state.photos.filter(p => p.hasGps).forEach(addMarker);
+      }
+
+
+      function buildLocationText(photo) {
+        const mapsUrl = `https://www.google.com/maps?q=${photo.latitude},${photo.longitude}`;
+        return [
+          `${photo.displayName || photo.name}`,
+          `${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}`,
+          mapsUrl
+        ].join("\n");
+      }
+
+      async function shareLocation(photo) {
+        if (!photo?.hasGps) return;
+
+        const mapsUrl = `https://www.google.com/maps?q=${photo.latitude},${photo.longitude}`;
+        const shareData = {
+          title: `${photo.displayName || photo.name}`,
+          text: `${photo.displayName || photo.name}: ${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}`,
+          url: mapsUrl
+        };
+
+        try {
+          if (navigator.share) {
+            await navigator.share(shareData);
+            return;
+          }
+        } catch (error) {
+          if (error?.name === "AbortError") return;
+          console.warn("No se pudo usar el menú de compartir:", error);
+        }
+
+        try {
+          await navigator.clipboard.writeText(buildLocationText(photo));
+          alert("La ubicación fue copiada. Puedes pegarla en WhatsApp, correo u otra aplicación.");
+        } catch (error) {
+          window.prompt("Copia esta ubicación:", buildLocationText(photo));
+        }
+      }
+
+      function openWhatsApp(photo) {
+        if (!photo?.hasGps) return;
+        const message = encodeURIComponent(buildLocationText(photo));
+        window.open(`https://wa.me/?text=${message}`, "_blank", "noopener,noreferrer");
+      }
+
+      function openEmail(photo) {
+        if (!photo?.hasGps) return;
+        const subject = encodeURIComponent(`${photo.displayName || photo.name}`);
+        const body = encodeURIComponent(buildLocationText(photo));
+        window.location.href = `mailto:?subject=${subject}&body=${body}`;
+      }
+
+      async function shareAllLocations() {
+        const gpsPhotos = state.photos.filter(photo => photo.hasGps);
+        if (!gpsPhotos.length) return;
+
+        const project = (els.projectName.value || "Ubicaciones de fotografías").trim();
+        const body = gpsPhotos.map((photo, index) => {
+          const mapsUrl = `https://www.google.com/maps?q=${photo.latitude},${photo.longitude}`;
+          return [
+            `${index + 1}. ${photo.displayName || photo.name}`,
+            `${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}`,
+            mapsUrl
+          ].join("\n");
+        }).join("\n\n");
+
+        const shareData = {
+          title: project,
+          text: `${project}\n\n${body}`
+        };
+
+        try {
+          if (navigator.share) {
+            await navigator.share(shareData);
+            return;
+          }
+        } catch (error) {
+          if (error?.name === "AbortError") return;
+          console.warn("No se pudo compartir la lista:", error);
+        }
+
+        try {
+          await navigator.clipboard.writeText(shareData.text);
+          alert("Todas las ubicaciones fueron copiadas.");
+        } catch (error) {
+          window.prompt("Copia las ubicaciones:", shareData.text);
+        }
+      }
+
+      function renderList() {
+        els.photoList.innerHTML = "";
+        els.emptyState.style.display = state.photos.length ? "none" : "block";
+
+        state.photos.forEach(photo => {
+          const card = document.createElement("article");
+          card.className = "photo-card";
+
+          const locationText = photo.hasGps
+            ? `${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}`
+            : "La fotografía no contiene coordenadas GPS";
+
+          const statusClass = photo.hasGps ? "ok" : "bad";
+          const statusText = photo.hasGps ? "✓ GPS encontrado" : "⚠ Sin GPS";
+          const mapsUrl = photo.hasGps
+            ? `https://www.google.com/maps?q=${photo.latitude},${photo.longitude}`
+            : "#";
+
+          card.innerHTML = `
+            <img class="thumb" src="${photo.objectUrl}" alt="">
+            <div>
+              <div class="share-name-wrap">
+                <label for="share-name-${photo.id}">Nombre para compartir</label>
+                <input
+                  id="share-name-${photo.id}"
+                  class="share-name-input"
+                  type="text"
+                  maxlength="100"
+                  data-id="${photo.id}"
+                  value="${escapeHtml(photo.displayName || photo.name)}"
+                  placeholder="Ej. Casa en venta Hidalgo 513"
+                />
+                <div class="original-file">Archivo original: ${escapeHtml(photo.name)}</div>
+              </div>
+              <div class="meta">
+                ${escapeHtml(locationText)}<br>
+                ${escapeHtml(formatDate(photo.date))}
+                ${photo.source ? `<br>Lector: ${escapeHtml(photo.source)}` : ""}
+                ${!photo.hasGps && photo.diagnostic ? `<br>Diagnóstico: ${escapeHtml(photo.diagnostic)}` : ""}
+              </div>
+              <span class="status ${statusClass}">${statusText}</span>
+            </div>
+            <div class="card-actions">
+              ${photo.hasGps
+                ? `<a class="button-link secondary" href="${mapsUrl}" target="_blank" rel="noopener noreferrer">Google Maps</a>
+                   <button class="ghost locate-btn" type="button" data-id="${photo.id}">Ver en mapa</button>
+                   <button class="primary share-btn" type="button" data-id="${photo.id}">Compartir</button>
+                   <button class="secondary whatsapp-btn" type="button" data-id="${photo.id}">WhatsApp</button>
+                   <button class="secondary email-btn" type="button" data-id="${photo.id}">Correo</button>`
+                : `<button class="ghost" type="button" disabled>Sin ubicación</button>`}
+              <button class="danger remove-btn" type="button" data-id="${photo.id}">Quitar</button>
+            </div>
+          `;
+
+          els.photoList.appendChild(card);
+        });
+      }
+
+      function renderSummary() {
+        const gpsCount = state.photos.filter(p => p.hasGps).length;
+        const noGpsCount = state.photos.length - gpsCount;
+
+        els.totalCount.textContent = state.photos.length;
+        els.gpsCount.textContent = gpsCount;
+        els.noGpsCount.textContent = noGpsCount;
+        els.mapCount.textContent = `${gpsCount} ${gpsCount === 1 ? "punto" : "puntos"}`;
+        els.listCount.textContent = `${state.photos.length} ${state.photos.length === 1 ? "foto" : "fotos"}`;
+      }
+
+      function toggleControls() {
+        const hasAny = state.photos.length > 0;
+        const hasGps = state.photos.some(p => p.hasGps);
+        els.clearBtn.disabled = !hasAny || state.processing;
+        els.kmzBtn.disabled = !hasGps || state.processing;
+        els.kmlBtn.disabled = !hasGps || state.processing;
+        els.fitBtn.disabled = !hasGps || state.processing;
+        els.shareAllBtn.disabled = !hasGps || state.processing;
+      }
+
+      function render() {
+        rebuildMarkers();
+        renderList();
+        renderSummary();
+        toggleControls();
+      }
+
+      function fitAllPoints() {
+        const gpsPhotos = state.photos.filter(p => p.hasGps);
+        if (!gpsPhotos.length) return;
+        const bounds = state.markerLayer.getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds.pad(0.20), { maxZoom: 18 });
+      }
+
+      function removePhoto(id) {
+        const index = state.photos.findIndex(photo => photo.id === id);
+        if (index === -1) return;
+        URL.revokeObjectURL(state.photos[index].objectUrl);
+        state.photos.splice(index, 1);
+        render();
+      }
+
+      function clearAll() {
+        state.photos.forEach(photo => URL.revokeObjectURL(photo.objectUrl));
+        state.photos = [];
+        render();
+        map.setView([25.6866, -100.3161], 10);
+      }
+
+      function makeKml() {
+        const project = (els.projectName.value || "Ubicaciones de fotografías").trim();
+        const points = state.photos.filter(photo => photo.hasGps);
+
+        const placemarks = points.map((photo, index) => {
+          const mapsUrl = `https://www.google.com/maps?q=${photo.latitude},${photo.longitude}`;
+          const description = [
+            `<b>Nombre:</b> ${escapeHtml(photo.displayName || photo.name)}`,
+            `<b>Archivo original:</b> ${escapeHtml(photo.name)}`,
+            `<b>Coordenadas:</b> ${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}`,
+            `<b>Fecha:</b> ${escapeHtml(formatDate(photo.date))}`,
+            `<a href="${mapsUrl}">Abrir en Google Maps</a>`
+          ].join("<br>");
+
+          return `
+    <Placemark>
+      <name>${escapeXml(`${index + 1}. ${photo.displayName || photo.name}`)}</name>
+      <description><![CDATA[${description.replaceAll("]]>", "]]]]><![CDATA[>")}]]></description>
+      <Point>
+        <coordinates>${photo.longitude},${photo.latitude},0</coordinates>
+      </Point>
+    </Placemark>`;
+        }).join("");
+
+        return `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>${escapeXml(project)}</name>
+    <description>${escapeXml(`Puntos obtenidos de ${points.length} fotografías con GPS.`)}</description>
+${placemarks}
+  </Document>
+</kml>`;
+      }
+
+      function downloadBlob(blob, fileName) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+      }
+
+      function downloadKml() {
+        const kml = makeKml();
+        const name = safeFileName(els.projectName.value);
+        downloadBlob(
+          new Blob([kml], { type: "application/vnd.google-earth.kml+xml;charset=utf-8" }),
+          `${name}.kml`
+        );
+      }
+
+      async function downloadKmz() {
+        try {
+          clearError();
+          els.kmzBtn.disabled = true;
+          els.kmzBtn.textContent = "Creando KMZ…";
+
+          const zip = new JSZip();
+          zip.file("doc.kml", makeKml());
+          const blob = await zip.generateAsync({
+            type: "blob",
+            compression: "DEFLATE",
+            compressionOptions: { level: 6 },
+            mimeType: "application/vnd.google-earth.kmz"
+          });
+
+          downloadBlob(blob, `${safeFileName(els.projectName.value)}.kmz`);
+        } catch (err) {
+          console.error(err);
+          showError("No fue posible generar el KMZ en este navegador. Puedes descargar el archivo KML.");
+        } finally {
+          els.kmzBtn.textContent = "🌎 Descargar KMZ";
+          toggleControls();
+        }
+      }
+
+      els.input.addEventListener("change", event => processFiles(event.target.files));
+
+      ["dragenter", "dragover"].forEach(type => {
+        els.dropzone.addEventListener(type, event => {
+          event.preventDefault();
+          els.dropzone.classList.add("dragover");
+        });
+      });
+
+      ["dragleave", "drop"].forEach(type => {
+        els.dropzone.addEventListener(type, event => {
+          event.preventDefault();
+          els.dropzone.classList.remove("dragover");
+        });
+      });
+
+      els.dropzone.addEventListener("drop", event => processFiles(event.dataTransfer.files));
+      els.clearBtn.addEventListener("click", clearAll);
+      els.fitBtn.addEventListener("click", fitAllPoints);
+      els.shareAllBtn.addEventListener("click", shareAllLocations);
+      els.kmlBtn.addEventListener("click", downloadKml);
+      els.kmzBtn.addEventListener("click", downloadKmz);
+
+      els.photoList.addEventListener("input", event => {
+        const input = event.target.closest(".share-name-input");
+        if (!input) return;
+
+        const photo = state.photos.find(item => item.id === input.dataset.id);
+        if (!photo) return;
+
+        photo.displayName = input.value.trim() || photo.name;
+
+        const marker = state.markersById.get(photo.id);
+        if (marker && photo.hasGps) {
+          const mapsUrl = `https://www.google.com/maps?q=${photo.latitude},${photo.longitude}`;
+          marker.setPopupContent(`
+            <div style="min-width:190px">
+              <strong>${escapeHtml(photo.displayName || photo.name)}</strong><br>
+              <span>${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}</span><br>
+              <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer">Abrir en Google Maps</a>
+            </div>
+          `);
+        }
+      });
+
+      els.photoList.addEventListener("click", event => {
+        const removeButton = event.target.closest(".remove-btn");
+        if (removeButton) {
+          removePhoto(removeButton.dataset.id);
+          return;
+        }
+
+        const locateButton = event.target.closest(".locate-btn");
+        if (locateButton) {
+          const marker = state.markersById.get(locateButton.dataset.id);
+          if (!marker) return;
+          const position = marker.getLatLng();
+          map.setView(position, 18);
+          marker.openPopup();
+          document.getElementById("map").scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+
+        const shareButton = event.target.closest(".share-btn");
+        if (shareButton) {
+          const photo = state.photos.find(item => item.id === shareButton.dataset.id);
+          shareLocation(photo);
+          return;
+        }
+
+        const whatsappButton = event.target.closest(".whatsapp-btn");
+        if (whatsappButton) {
+          const photo = state.photos.find(item => item.id === whatsappButton.dataset.id);
+          openWhatsApp(photo);
+          return;
+        }
+
+        const emailButton = event.target.closest(".email-btn");
+        if (emailButton) {
+          const photo = state.photos.find(item => item.id === emailButton.dataset.id);
+          openEmail(photo);
+        }
+      });
+
+      window.addEventListener("resize", () => map.invalidateSize());
+      setTimeout(() => map.invalidateSize(), 250);
+      render();
+    })();
+  </script>
+
+  <script>
+    if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(error => {
+          console.warn("No fue posible registrar el modo instalable:", error);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
