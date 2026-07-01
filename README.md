@@ -20,3 +20,12 @@ Aplicación web instalable para leer las coordenadas GPS guardadas en fotografí
 - Comparte el punto o descarga el KML/KMZ.
 
 La lectura de fotografías y la creación de archivos se realizan en el dispositivo. El mapa base necesita conexión a internet.
+
+## Novedad en la versión 1.1
+
+- Botón **Compartir KMZ** para enviar el archivo por el menú nativo del teléfono, incluyendo WhatsApp, correo, Drive u otras aplicaciones compatibles.
+- Si el navegador no permite compartir archivos, el KMZ se descarga automáticamente como alternativa.
+
+
+## Novedades v1.2
+- El archivo KMZ ahora incluye la foto dentro de cada marcador para verla en Google Earth.

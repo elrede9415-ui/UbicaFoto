@@ -1,4 +1,4 @@
-const CACHE_NAME = "ubicafoto-v1";
+const CACHE_NAME = "ubicafoto-v1.2";
 const APP_SHELL = [
   "./",
   "./index.html",

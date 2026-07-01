@@ -436,7 +436,7 @@
       </label>
 
       <div class="notice">
-        Selecciona el archivo original de la carpeta DCIM/Camera. Después puedes cambiar el nombre de cada punto; ese nombre se usará al compartir y dentro del KMZ.
+        Selecciona el archivo original de la carpeta DCIM/Camera. Después puedes cambiar el nombre de cada punto; ese nombre se usará al compartir y dentro del KMZ. Ahora el KMZ también puede incluir la foto dentro de cada marcador en Google Earth.
       </div>
       <div class="privacy">🔒 <span>Las fotografías se procesan dentro de este dispositivo. La app no las envía a un servidor.</span></div>
 
@@ -449,6 +449,7 @@
 
       <div class="toolbar">
         <button id="kmzBtn" class="primary" type="button" disabled>🌎 Descargar KMZ</button>
+        <button id="shareKmzBtn" class="secondary" type="button" disabled>📤 Compartir KMZ</button>
         <button id="kmlBtn" class="secondary" type="button" disabled>📄 Descargar KML</button>
         <button id="fitBtn" class="ghost" type="button" disabled>🗺️ Ver todos los puntos</button>
         <button id="shareAllBtn" class="secondary" type="button" disabled>📤 Compartir ubicaciones</button>
@@ -480,7 +481,7 @@
       <div id="photoList" class="photo-list"></div>
     </section>
 
-    <footer>UbicaFoto · Versión 1.0</footer>
+    <footer>UbicaFoto · Versión 1.1</footer>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
@@ -506,6 +507,7 @@
         projectName: document.getElementById("projectName"),
         clearBtn: document.getElementById("clearBtn"),
         kmzBtn: document.getElementById("kmzBtn"),
+        shareKmzBtn: document.getElementById("shareKmzBtn"),
         kmlBtn: document.getElementById("kmlBtn"),
         fitBtn: document.getElementById("fitBtn"),
         shareAllBtn: document.getElementById("shareAllBtn"),
@@ -1195,6 +1197,7 @@
         const hasGps = state.photos.some(p => p.hasGps);
         els.clearBtn.disabled = !hasAny || state.processing;
         els.kmzBtn.disabled = !hasGps || state.processing;
+        els.shareKmzBtn.disabled = !hasGps || state.processing;
         els.kmlBtn.disabled = !hasGps || state.processing;
         els.fitBtn.disabled = !hasGps || state.processing;
         els.shareAllBtn.disabled = !hasGps || state.processing;
@@ -1229,19 +1232,40 @@
         map.setView([25.6866, -100.3161], 10);
       }
 
-      function makeKml() {
+      function getKmzImageAssetName(photo, index) {
+        const originalName = String(photo?.name || `foto-${index + 1}.jpg`);
+        const match = originalName.match(/\.([a-zA-Z0-9]+)$/);
+        const extension = match ? match[1].toLowerCase() : "jpg";
+        const safeBase = safeFileName((photo.displayName || photo.name || `foto-${index + 1}`))
+          .replace(/\s+/g, "_")
+          .replace(/[^a-zA-Z0-9_\-]/g, "_")
+          .replace(/_+/g, "_")
+          .replace(/^_+|_+$/g, "") || `foto_${index + 1}`;
+        return `images/${String(index + 1).padStart(3, "0")}_${safeBase}.${extension}`;
+      }
+
+      function makeKml(imageMap = new Map()) {
         const project = (els.projectName.value || "Ubicaciones de fotografías").trim();
         const points = state.photos.filter(photo => photo.hasGps);
 
         const placemarks = points.map((photo, index) => {
           const mapsUrl = `https://www.google.com/maps?q=${photo.latitude},${photo.longitude}`;
-          const description = [
+          const imagePath = imageMap.get(photo.id) || "";
+          const descriptionParts = [
             `<b>Nombre:</b> ${escapeHtml(photo.displayName || photo.name)}`,
             `<b>Archivo original:</b> ${escapeHtml(photo.name)}`,
             `<b>Coordenadas:</b> ${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}`,
             `<b>Fecha:</b> ${escapeHtml(formatDate(photo.date))}`,
             `<a href="${mapsUrl}">Abrir en Google Maps</a>`
-          ].join("<br>");
+          ];
+
+          if (imagePath) {
+            descriptionParts.push(
+              `<div style="margin-top:10px;"><b>Foto:</b><br><img src="${escapeHtml(imagePath)}" alt="${escapeHtml(photo.displayName || photo.name)}" style="max-width:320px; max-height:240px; border:1px solid #cccccc;" /></div>`
+            );
+          }
+
+          const description = descriptionParts.join("<br>");
 
           return `
     <Placemark>
@@ -1283,27 +1307,87 @@ ${placemarks}
         );
       }
 
+      async function createKmzBlob() {
+        const zip = new JSZip();
+        const points = state.photos.filter(photo => photo.hasGps);
+        const imageMap = new Map();
+
+        points.forEach((photo, index) => {
+          const assetName = getKmzImageAssetName(photo, index);
+          imageMap.set(photo.id, assetName);
+          if (photo.file) zip.file(assetName, photo.file);
+        });
+
+        zip.file("doc.kml", makeKml(imageMap));
+        return zip.generateAsync({
+          type: "blob",
+          compression: "DEFLATE",
+          compressionOptions: { level: 6 },
+          mimeType: "application/vnd.google-earth.kmz"
+        });
+      }
+
       async function downloadKmz() {
         try {
           clearError();
           els.kmzBtn.disabled = true;
           els.kmzBtn.textContent = "Creando KMZ…";
 
-          const zip = new JSZip();
-          zip.file("doc.kml", makeKml());
-          const blob = await zip.generateAsync({
-            type: "blob",
-            compression: "DEFLATE",
-            compressionOptions: { level: 6 },
-            mimeType: "application/vnd.google-earth.kmz"
-          });
-
+          const blob = await createKmzBlob();
           downloadBlob(blob, `${safeFileName(els.projectName.value)}.kmz`);
         } catch (err) {
           console.error(err);
           showError("No fue posible generar el KMZ en este navegador. Puedes descargar el archivo KML.");
         } finally {
           els.kmzBtn.textContent = "🌎 Descargar KMZ";
+          toggleControls();
+        }
+      }
+
+      async function shareKmz() {
+        let blob = null;
+        let fileName = "";
+
+        try {
+          clearError();
+          els.shareKmzBtn.disabled = true;
+          els.shareKmzBtn.textContent = "Creando KMZ…";
+
+          fileName = `${safeFileName(els.projectName.value)}.kmz`;
+          blob = await createKmzBlob();
+          const file = new File([blob], fileName, {
+            type: "application/vnd.google-earth.kmz",
+            lastModified: Date.now()
+          });
+
+          const shareData = {
+            title: fileName,
+            text: `Archivo KMZ generado con UbicaFoto: ${fileName}`,
+            files: [file]
+          };
+
+          const canShareFile =
+            typeof navigator.share === "function" &&
+            (typeof navigator.canShare !== "function" || navigator.canShare({ files: [file] }));
+
+          if (canShareFile) {
+            await navigator.share(shareData);
+          } else {
+            downloadBlob(blob, fileName);
+            alert("Este navegador no permite compartir archivos directamente. El KMZ se descargó para que puedas compartirlo desde Archivos, WhatsApp o correo.");
+          }
+        } catch (err) {
+          if (err?.name === "AbortError") return;
+          console.error(err);
+
+          if (blob && fileName) {
+            downloadBlob(blob, fileName);
+            showError("No se pudo abrir el menú para compartir. El KMZ se descargó en tu dispositivo.");
+          } else {
+            showError("No fue posible crear el KMZ para compartir.");
+          }
+        } finally {
+          els.shareKmzBtn.textContent = "📤 Compartir KMZ";
           toggleControls();
         }
       }
@@ -1330,6 +1414,7 @@ ${placemarks}
       els.shareAllBtn.addEventListener("click", shareAllLocations);
       els.kmlBtn.addEventListener("click", downloadKml);
       els.kmzBtn.addEventListener("click", downloadKmz);
+      els.shareKmzBtn.addEventListener("click", shareKmz);
 
       els.photoList.addEventListener("input", event => {
         const input = event.target.closest(".share-name-input");
