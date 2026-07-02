@@ -423,6 +423,29 @@
     .status.ok { background: #e6f5ed; color: var(--ok); }
     .status.bad { background: #faeaea; color: var(--bad); }
 
+    .order-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .order-label {
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 700;
+      margin-right: 2px;
+    }
+
+    .order-btn {
+      min-height: 32px;
+      min-width: 42px;
+      padding: 5px 9px;
+      border-radius: 9px;
+      font-size: .8rem;
+    }
+
     .card-actions {
       display: flex;
       flex-direction: column;
@@ -507,7 +530,7 @@
       </label>
 
       <div class="notice">
-        Selecciona el archivo original de la carpeta DCIM/Camera. Puedes cambiar el nombre, agregar una nota y decidir si el KMZ incluye las fotos.
+        Selecciona el archivo original de la carpeta DCIM/Camera. Puedes cambiar el nombre, agregar una nota y ordenar las fotografías. Las coordenadas vacías 0,0 se reconocen automáticamente como “Sin GPS”. Puedes cambiar el nombre, agregar una nota y decidir si el KMZ incluye las fotos.
       </div>
       <div class="privacy">🔒 <span>Las fotografías se procesan dentro de este dispositivo. La app no las envía a un servidor.</span></div>
 
@@ -563,7 +586,7 @@
       <div id="photoList" class="photo-list"></div>
     </section>
 
-    <footer>UbicaFoto · Versión 1.4</footer>
+    <footer>UbicaFoto · Versión 1.6</footer>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
@@ -647,6 +670,21 @@
 
       function formatCoordinate(value) {
         return Number(value).toFixed(7);
+      }
+
+      function isZeroGpsPlaceholder(latitude, longitude) {
+        return Number.isFinite(latitude) &&
+          Number.isFinite(longitude) &&
+          Math.abs(latitude) < 0.0000001 &&
+          Math.abs(longitude) < 0.0000001;
+      }
+
+      function isUsableGpsPair(latitude, longitude) {
+        return Number.isFinite(latitude) &&
+          Number.isFinite(longitude) &&
+          latitude >= -90 && latitude <= 90 &&
+          longitude >= -180 && longitude <= 180 &&
+          !isZeroGpsPlaceholder(latitude, longitude);
       }
 
       function formatDate(value) {
@@ -1044,11 +1082,11 @@
 
         const latitude = Number(metadata?.latitude);
         const longitude = Number(metadata?.longitude);
-        const hasGps =
-          Number.isFinite(latitude) &&
-          Number.isFinite(longitude) &&
-          latitude >= -90 && latitude <= 90 &&
-          longitude >= -180 && longitude <= 180;
+        const zeroGpsPlaceholder = isZeroGpsPlaceholder(latitude, longitude);
+        const hasGps = isUsableGpsPair(latitude, longitude);
+        const diagnostic = zeroGpsPlaceholder
+          ? "El archivo contiene coordenadas GPS vacías (0,0). Se trató como una fotografía sin ubicación."
+          : (metadata?.diagnostic || error || "No se encontraron metadatos de ubicación.");
 
         return {
           id: uniqueId(),
@@ -1062,7 +1100,7 @@
           hasGps,
           date: metadata?.date || null,
           source: metadata?.source || null,
-          diagnostic: metadata?.diagnostic || error || "No se encontraron metadatos de ubicación.",
+          diagnostic,
           displayName: "",
           note: "",
           error
@@ -1217,7 +1255,7 @@
         els.photoList.innerHTML = "";
         els.emptyState.style.display = state.photos.length ? "none" : "block";
 
-        state.photos.forEach(photo => {
+        state.photos.forEach((photo, photoIndex) => {
           const card = document.createElement("article");
           card.className = "photo-card";
 
@@ -1264,6 +1302,23 @@
                 ${!photo.hasGps && photo.diagnostic ? `<br>Diagnóstico: ${escapeHtml(photo.diagnostic)}` : ""}
               </div>
               <span class="status ${statusClass}">${statusText}</span>
+              <div class="order-row">
+                <span class="order-label">Orden ${photoIndex + 1} de ${state.photos.length}</span>
+                <button
+                  class="ghost order-btn move-up-btn"
+                  type="button"
+                  data-id="${photo.id}"
+                  ${photoIndex === 0 ? "disabled" : ""}
+                  aria-label="Subir fotografía"
+                >↑ Subir</button>
+                <button
+                  class="ghost order-btn move-down-btn"
+                  type="button"
+                  data-id="${photo.id}"
+                  ${photoIndex === state.photos.length - 1 ? "disabled" : ""}
+                  aria-label="Bajar fotografía"
+                >↓ Bajar</button>
+              </div>
             </div>
             <div class="card-actions">
               ${photo.hasGps
@@ -1316,11 +1371,39 @@
         if (bounds.isValid()) map.fitBounds(bounds.pad(0.20), { maxZoom: 18 });
       }
 
+      function renumberAutomaticNames() {
+        state.photos.forEach((photo, index) => {
+          const currentName = String(photo.displayName || "").trim();
+          if (!currentName || /^Ubicación\s+\d+$/i.test(currentName)) {
+            photo.displayName = `Ubicación ${index + 1}`;
+          }
+        });
+      }
+
+      function movePhoto(id, direction) {
+        const currentIndex = state.photos.findIndex(photo => photo.id === id);
+        if (currentIndex === -1) return;
+
+        const newIndex = currentIndex + direction;
+        if (newIndex < 0 || newIndex >= state.photos.length) return;
+
+        const [photo] = state.photos.splice(currentIndex, 1);
+        state.photos.splice(newIndex, 0, photo);
+        renumberAutomaticNames();
+        render();
+
+        requestAnimationFrame(() => {
+          const movedInput = document.getElementById(`share-name-${id}`);
+          movedInput?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
+
       function removePhoto(id) {
         const index = state.photos.findIndex(photo => photo.id === id);
         if (index === -1) return;
         URL.revokeObjectURL(state.photos[index].objectUrl);
         state.photos.splice(index, 1);
+        renumberAutomaticNames();
         render();
       }
 
@@ -1555,6 +1638,18 @@ ${placemarks}
       });
 
       els.photoList.addEventListener("click", event => {
+        const moveUpButton = event.target.closest(".move-up-btn");
+        if (moveUpButton) {
+          movePhoto(moveUpButton.dataset.id, -1);
+          return;
+        }
+
+        const moveDownButton = event.target.closest(".move-down-btn");
+        if (moveDownButton) {
+          movePhoto(moveDownButton.dataset.id, 1);
+          return;
+        }
+
         const removeButton = event.target.closest(".remove-btn");
         if (removeButton) {
           removePhoto(removeButton.dataset.id);

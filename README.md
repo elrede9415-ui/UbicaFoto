@@ -1,6 +1,6 @@
 # UbicaFoto
 
-Aplicación web instalable para leer las coordenadas GPS guardadas en fotografías originales, mostrar los puntos en un mapa, compartirlos por WhatsApp o correo y exportarlos a KML/KMZ.
+Aplicación web instalable para leer las coordenadas GPS guardadas en fotografías originales, mostrar los puntos en un mapa, compartirlos por WhatsApp o correo y exportarlos a KMZ.
 
 ## Publicar en GitHub Pages
 
@@ -17,7 +17,7 @@ Aplicación web instalable para leer las coordenadas GPS guardadas en fotografí
 - Abre la app desde Chrome.
 - Selecciona los archivos originales desde `DCIM/Camera`.
 - Edita el nombre de cada ubicación.
-- Comparte el punto o descarga el KML/KMZ.
+- Comparte el punto o descarga el KMZ.
 
 La lectura de fotografías y la creación de archivos se realizan en el dispositivo. El mapa base necesita conexión a internet.
 
@@ -29,3 +29,25 @@ La lectura de fotografías y la creación de archivos se realizan en el disposit
 
 ## Novedades v1.2
 - El archivo KMZ ahora incluye la foto dentro de cada marcador para verla en Google Earth.
+
+
+## Novedades v1.3
+- Nota opcional por fotografía; aparece al compartir y en Google Earth.
+- Interruptor para incluir o no las fotografías dentro del KMZ.
+
+
+## Novedades v1.4
+- Bloquea el gesto accidental de deslizar hacia abajo para actualizar.
+- Muestra una advertencia del navegador si se intenta cerrar o recargar con fotos cargadas.
+- Agrega el botón **Nuevo trabajo**, con confirmación antes de borrar fotos, nombres y notas.
+
+
+## Novedades v1.5
+- Se retiró el botón KML para dejar la interfaz más sencilla.
+- La app se enfoca en descargar y compartir KMZ.
+
+
+## Novedades v1.6
+- Rechaza coordenadas vacías 0,0 y las muestra como fotografías sin GPS.
+- Permite cambiar el orden de las fotografías con los botones Subir y Bajar.
+- El nuevo orden se utiliza en la lista, al compartir y en el archivo KMZ.
