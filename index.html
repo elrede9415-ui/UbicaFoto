@@ -35,9 +35,15 @@
     }
 
     * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
+    html {
+      scroll-behavior: smooth;
+      overscroll-behavior-y: none;
+    }
+
     body {
       margin: 0;
+      overscroll-behavior-y: none;
+      touch-action: pan-x pan-y;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--text);
       background:
@@ -155,6 +161,20 @@
       font-size: .86rem;
       display: flex;
       gap: 7px;
+      align-items: flex-start;
+    }
+
+    .work-protection {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #cfe3dc;
+      background: #eef8f4;
+      color: var(--primary-dark);
+      font-size: .84rem;
+      line-height: 1.4;
+      display: flex;
+      gap: 8px;
       align-items: flex-start;
     }
 
@@ -474,7 +494,7 @@
           <label for="projectName">Nombre del levantamiento o inmueble</label>
           <input id="projectName" type="text" value="Ubicaciones de fotografías" maxlength="100" />
         </div>
-        <button id="clearBtn" class="danger" type="button" disabled>🗑️ Limpiar</button>
+        <button id="clearBtn" class="danger" type="button">🆕 Nuevo trabajo</button>
       </div>
 
       <label class="dropzone" id="dropzone" for="fileInput">
@@ -490,6 +510,10 @@
         Selecciona el archivo original de la carpeta DCIM/Camera. Puedes cambiar el nombre, agregar una nota y decidir si el KMZ incluye las fotos.
       </div>
       <div class="privacy">🔒 <span>Las fotografías se procesan dentro de este dispositivo. La app no las envía a un servidor.</span></div>
+
+      <div class="work-protection">
+        🛡️ <span>El gesto de deslizar hacia abajo para actualizar está bloqueado mientras usas la app. Para borrar el trabajo actual, utiliza <b>Nuevo trabajo</b>.</span>
+      </div>
 
       <label class="kmz-option" for="includePhotosKmz">
         <input id="includePhotosKmz" type="checkbox" checked />
@@ -540,7 +564,7 @@
       <div id="photoList" class="photo-list"></div>
     </section>
 
-    <footer>UbicaFoto · Versión 1.3</footer>
+    <footer>UbicaFoto · Versión 1.4</footer>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
@@ -1273,7 +1297,7 @@
       function toggleControls() {
         const hasAny = state.photos.length > 0;
         const hasGps = state.photos.some(p => p.hasGps);
-        els.clearBtn.disabled = !hasAny || state.processing;
+        els.clearBtn.disabled = state.processing;
         els.kmzBtn.disabled = !hasGps || state.processing;
         els.shareKmzBtn.disabled = !hasGps || state.processing;
         els.kmlBtn.disabled = !hasGps || state.processing;
@@ -1303,11 +1327,29 @@
         render();
       }
 
-      function clearAll() {
+      function resetCurrentWork() {
         state.photos.forEach(photo => URL.revokeObjectURL(photo.objectUrl));
         state.photos = [];
+        els.projectName.value = "Ubicaciones de fotografías";
+        els.includePhotosKmz.checked = true;
+        clearError();
         render();
         map.setView([25.6866, -100.3161], 10);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      function startNewWork() {
+        const hasWork = state.photos.length > 0 ||
+          els.projectName.value.trim() !== "Ubicaciones de fotografías";
+
+        if (hasWork) {
+          const confirmed = window.confirm(
+            "Se eliminarán las fotos, nombres y notas del trabajo actual. ¿Deseas comenzar un nuevo trabajo?"
+          );
+          if (!confirmed) return;
+        }
+
+        resetCurrentWork();
       }
 
       function getKmzImageAssetName(photo, index) {
@@ -1492,7 +1534,7 @@ ${placemarks}
       });
 
       els.dropzone.addEventListener("drop", event => processFiles(event.dataTransfer.files));
-      els.clearBtn.addEventListener("click", clearAll);
+      els.clearBtn.addEventListener("click", startNewWork);
       els.fitBtn.addEventListener("click", fitAllPoints);
       els.shareAllBtn.addEventListener("click", shareAllLocations);
       els.kmlBtn.addEventListener("click", downloadKml);
@@ -1563,6 +1605,26 @@ ${placemarks}
           openEmail(photo);
         }
       });
+
+      // Evita perder el levantamiento por actualizar accidentalmente.
+      window.addEventListener("beforeunload", event => {
+        if (!state.photos.length) return;
+        event.preventDefault();
+        event.returnValue = "";
+      });
+
+      // Refuerzo para Android: bloquea el gesto de jalar hacia abajo desde la parte superior.
+      let pullStartY = 0;
+      document.addEventListener("touchstart", event => {
+        if (event.touches.length === 1) pullStartY = event.touches[0].clientY;
+      }, { passive: true });
+
+      document.addEventListener("touchmove", event => {
+        if (!state.photos.length || event.touches.length !== 1) return;
+        const currentY = event.touches[0].clientY;
+        const pullingDownAtTop = window.scrollY <= 0 && currentY > pullStartY;
+        if (pullingDownAtTop) event.preventDefault();
+      }, { passive: false });
 
       window.addEventListener("resize", () => map.invalidateSize());
       setTimeout(() => map.invalidateSize(), 250);
