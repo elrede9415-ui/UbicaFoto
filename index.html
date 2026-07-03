@@ -145,38 +145,46 @@
     .drop-help { color: var(--muted); font-size: .9rem; margin-top: 5px; }
     #fileInput { display: none; }
 
-    .notice {
+    .info-details {
       margin-top: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #f8fbfa;
+      overflow: hidden;
+    }
+
+    .info-details summary {
+      min-height: 46px;
       padding: 11px 13px;
-      border-radius: 12px;
-      background: #fff7e8;
-      color: #765011;
-      font-size: .9rem;
-      line-height: 1.4;
-    }
-
-    .privacy {
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: .86rem;
       display: flex;
-      gap: 7px;
-      align-items: flex-start;
-    }
-
-    .work-protection {
-      margin-top: 10px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid #cfe3dc;
-      background: #eef8f4;
-      color: var(--primary-dark);
-      font-size: .84rem;
-      line-height: 1.4;
-      display: flex;
+      align-items: center;
       gap: 8px;
-      align-items: flex-start;
+      color: var(--primary-dark);
+      font-weight: 750;
+      cursor: pointer;
+      list-style: none;
+      user-select: none;
     }
+
+    .info-details summary::-webkit-details-marker { display: none; }
+
+    .info-details summary::after {
+      content: "⌄";
+      margin-left: auto;
+      font-size: 1.15rem;
+      transition: transform .16s ease;
+    }
+
+    .info-details[open] summary::after { transform: rotate(180deg); }
+
+    .info-content {
+      padding: 0 13px 12px;
+      color: var(--muted);
+      font-size: .84rem;
+      line-height: 1.45;
+    }
+
+    .info-content p { margin: 7px 0 0; }
 
     .kmz-option {
       margin-top: 12px;
@@ -463,12 +471,58 @@
     .error-box {
       display: none;
       margin-top: 12px;
-      color: var(--bad);
-      background: #fff0f0;
-      border: 1px solid #f2cdcd;
       padding: 11px 13px;
       border-radius: 12px;
       font-size: .9rem;
+      line-height: 1.4;
+    }
+
+    .error-box.error {
+      color: var(--bad);
+      background: #fff0f0;
+      border: 1px solid #f2cdcd;
+    }
+
+    .error-box.info {
+      color: var(--primary-dark);
+      background: #eef8f4;
+      border: 1px solid #cfe3dc;
+    }
+
+    .kmz-recovery {
+      margin-top: 10px;
+      padding: 12px;
+      border: 1px solid #cfe3dc;
+      border-radius: 12px;
+      background: #f5fbf8;
+    }
+
+    .kmz-recovery[hidden] { display: none; }
+
+    .kmz-recovery strong {
+      display: block;
+      color: var(--primary-dark);
+      margin-bottom: 4px;
+    }
+
+    .kmz-recovery p {
+      margin: 0;
+      color: var(--muted);
+      font-size: .84rem;
+      line-height: 1.4;
+    }
+
+    .recovery-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .recovery-actions button {
+      min-height: 39px;
+      padding: 8px 11px;
+      font-size: .84rem;
     }
 
     footer {
@@ -529,14 +583,14 @@
         </div>
       </label>
 
-      <div class="notice">
-        Selecciona el archivo original de la carpeta DCIM/Camera. Puedes cambiar el nombre, agregar una nota y ordenar las fotografías. Las coordenadas vacías 0,0 se reconocen automáticamente como “Sin GPS”. Puedes cambiar el nombre, agregar una nota y decidir si el KMZ incluye las fotos.
-      </div>
-      <div class="privacy">🔒 <span>Las fotografías se procesan dentro de este dispositivo. La app no las envía a un servidor.</span></div>
-
-      <div class="work-protection">
-        🛡️ <span>El gesto de deslizar hacia abajo para actualizar está bloqueado mientras usas la app. Para borrar el trabajo actual, utiliza <b>Nuevo trabajo</b>.</span>
-      </div>
+      <details class="info-details">
+        <summary>ℹ️ Información y seguridad</summary>
+        <div class="info-content">
+          <p>Usa los archivos originales de <b>DCIM/Camera</b>. Puedes cambiar nombres, agregar notas y ordenar las fotografías.</p>
+          <p>🔒 Todo se procesa en este dispositivo; las fotos no se envían a un servidor.</p>
+          <p>🛡️ Para borrar el trabajo actual utiliza <b>Nuevo trabajo</b>. Las coordenadas vacías 0,0 se marcan como “Sin GPS”.</p>
+        </div>
+      </details>
 
       <label class="kmz-option" for="includePhotosKmz">
         <input id="includePhotosKmz" type="checkbox" checked />
@@ -553,8 +607,18 @@
 
       <div class="error-box" id="errorBox"></div>
 
+      <div class="kmz-recovery" id="kmzRecovery" hidden>
+        <strong>El KMZ ya está listo</strong>
+        <p id="kmzRecoveryText">Elige cómo guardarlo o vuelve a intentar compartirlo.</p>
+        <div class="recovery-actions">
+          <button id="saveReadyKmzBtn" class="primary" type="button">💾 Guardar KMZ…</button>
+          <button id="retryShareKmzBtn" class="secondary" type="button">📤 Reintentar compartir</button>
+          <button id="quickDownloadKmzBtn" class="ghost" type="button">⬇️ Descarga rápida</button>
+        </div>
+      </div>
+
       <div class="toolbar">
-        <button id="kmzBtn" class="primary" type="button" disabled>🌎 Descargar KMZ</button>
+        <button id="kmzBtn" class="primary" type="button" disabled>💾 Guardar KMZ</button>
         <button id="shareKmzBtn" class="secondary" type="button" disabled>📤 Compartir KMZ</button>
         <button id="fitBtn" class="ghost" type="button" disabled>🗺️ Ver todos los puntos</button>
         <button id="shareAllBtn" class="secondary" type="button" disabled>📤 Compartir ubicaciones</button>
@@ -586,7 +650,7 @@
       <div id="photoList" class="photo-list"></div>
     </section>
 
-    <footer>UbicaFoto · Versión 1.6</footer>
+    <footer>UbicaFoto · Versión 1.8</footer>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
@@ -603,7 +667,9 @@
         photos: [],
         markerLayer: null,
         markersById: new Map(),
-        processing: false
+        processing: false,
+        lastKmzBlob: null,
+        lastKmzFileName: ""
       };
 
       const els = {
@@ -626,7 +692,12 @@
         progressWrap: document.getElementById("progressWrap"),
         progressBar: document.getElementById("progressBar"),
         progressText: document.getElementById("progressText"),
-        errorBox: document.getElementById("errorBox")
+        errorBox: document.getElementById("errorBox"),
+        kmzRecovery: document.getElementById("kmzRecovery"),
+        kmzRecoveryText: document.getElementById("kmzRecoveryText"),
+        saveReadyKmzBtn: document.getElementById("saveReadyKmzBtn"),
+        retryShareKmzBtn: document.getElementById("retryShareKmzBtn"),
+        quickDownloadKmzBtn: document.getElementById("quickDownloadKmzBtn")
       };
 
       const map = L.map("map", { zoomControl: true }).setView([25.6866, -100.3161], 10);
@@ -697,14 +768,82 @@
         }).format(date);
       }
 
-      function showError(message) {
+      function showMessage(message, type = "error") {
         els.errorBox.textContent = message;
+        els.errorBox.className = `error-box ${type}`;
         els.errorBox.style.display = "block";
+        els.errorBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+
+      function showError(message) {
+        showMessage(message, "error");
+      }
+
+      function showInfo(message) {
+        showMessage(message, "info");
       }
 
       function clearError() {
         els.errorBox.textContent = "";
+        els.errorBox.className = "error-box";
         els.errorBox.style.display = "none";
+      }
+
+      function hideKmzRecovery() {
+        els.kmzRecovery.hidden = true;
+      }
+
+      function showKmzRecovery(blob, fileName, message) {
+        state.lastKmzBlob = blob;
+        state.lastKmzFileName = fileName;
+        els.kmzRecoveryText.textContent = message;
+        els.kmzRecovery.hidden = false;
+        els.kmzRecovery.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+
+      async function chooseKmzSaveHandle(fileName) {
+        if (!("showSaveFilePicker" in window)) return null;
+
+        return window.showSaveFilePicker({
+          id: "ubicafoto-kmz",
+          suggestedName: fileName,
+          startIn: "downloads",
+          types: [{
+            description: "Archivo de Google Earth (KMZ)",
+            accept: {
+              "application/vnd.google-earth.kmz": [".kmz"]
+            }
+          }]
+        });
+      }
+
+      async function writeBlobToHandle(fileHandle, blob) {
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      }
+
+      async function savePreparedKmz(blob, fileName) {
+        let fileHandle = null;
+
+        try {
+          fileHandle = await chooseKmzSaveHandle(fileName);
+        } catch (error) {
+          if (error?.name === "AbortError") return false;
+          console.warn("No se pudo abrir Guardar como:", error);
+        }
+
+        if (fileHandle) {
+          await writeBlobToHandle(fileHandle, blob);
+          hideKmzRecovery();
+          showInfo(`KMZ guardado como “${fileName}”. Elegiste directamente la carpeta donde quedó.`);
+          return true;
+        }
+
+        downloadBlob(blob, fileName);
+        hideKmzRecovery();
+        showInfo(`KMZ descargado como “${fileName}”. En este navegador se guarda normalmente en Descargas.`);
+        return true;
       }
 
       function setProgress(current, total, fileName = "") {
@@ -1524,19 +1663,74 @@ ${placemarks}
       }
 
       async function downloadKmz() {
+        let fileHandle = null;
+        const fileName = `${safeFileName(els.projectName.value)}.kmz`;
+
         try {
           clearError();
+          hideKmzRecovery();
           els.kmzBtn.disabled = true;
-          els.kmzBtn.textContent = "Creando KMZ…";
+          els.kmzBtn.textContent = "Preparando…";
 
+          // Se abre primero porque el navegador exige que el selector
+          // de guardado nazca directamente del toque del usuario.
+          try {
+            fileHandle = await chooseKmzSaveHandle(fileName);
+          } catch (error) {
+            if (error?.name === "AbortError") return;
+            console.warn("Selector de guardado no disponible:", error);
+          }
+
+          els.kmzBtn.textContent = "Creando KMZ…";
           const blob = await createKmzBlob();
-          downloadBlob(blob, `${safeFileName(els.projectName.value)}.kmz`);
+
+          if (fileHandle) {
+            await writeBlobToHandle(fileHandle, blob);
+            showInfo(`KMZ guardado como “${fileName}”. Elegiste directamente la carpeta donde quedó.`);
+          } else {
+            downloadBlob(blob, fileName);
+            showInfo(`KMZ descargado como “${fileName}”. En este navegador se guarda normalmente en Descargas.`);
+          }
         } catch (err) {
           console.error(err);
-          showError("No fue posible generar el KMZ en este navegador. Intenta nuevamente o prueba desde Chrome.");
+          showError("No fue posible guardar el KMZ. Intenta nuevamente o prueba desde Chrome.");
         } finally {
-          els.kmzBtn.textContent = "🌎 Descargar KMZ";
+          els.kmzBtn.textContent = "💾 Guardar KMZ";
           toggleControls();
+        }
+      }
+
+      async function retryPreparedKmzShare() {
+        const blob = state.lastKmzBlob;
+        const fileName = state.lastKmzFileName;
+        if (!blob || !fileName) return;
+
+        const file = new File([blob], fileName, {
+          type: "application/vnd.google-earth.kmz",
+          lastModified: Date.now()
+        });
+
+        try {
+          const canShareFile =
+            typeof navigator.share === "function" &&
+            (typeof navigator.canShare !== "function" || navigator.canShare({ files: [file] }));
+
+          if (!canShareFile) {
+            showInfo("Este teléfono no acepta compartir el KMZ directamente. Utiliza “Guardar KMZ…” para elegir dónde guardarlo.");
+            return;
+          }
+
+          await navigator.share({
+            title: fileName,
+            text: `Archivo KMZ generado con UbicaFoto: ${fileName}`,
+            files: [file]
+          });
+
+          hideKmzRecovery();
+        } catch (error) {
+          if (error?.name === "AbortError") return;
+          console.warn("Reintento de compartir KMZ:", error);
+          showInfo("El menú para compartir volvió a fallar. El KMZ sigue listo; puedes guardarlo con el botón de abajo.");
         }
       }
 
@@ -1546,6 +1740,7 @@ ${placemarks}
 
         try {
           clearError();
+          hideKmzRecovery();
           els.shareKmzBtn.disabled = true;
           els.shareKmzBtn.textContent = "Creando KMZ…";
 
@@ -1569,16 +1764,24 @@ ${placemarks}
           if (canShareFile) {
             await navigator.share(shareData);
           } else {
-            downloadBlob(blob, fileName);
-            alert("Este navegador no permite compartir archivos directamente. El KMZ se descargó para que puedas compartirlo desde Archivos, WhatsApp o correo.");
+            showInfo("Este teléfono no permite compartir el KMZ directamente. El archivo quedó preparado para guardarlo sin tener que generarlo otra vez.");
+            showKmzRecovery(
+              blob,
+              fileName,
+              "Toca “Guardar KMZ…” para elegir la carpeta —normalmente Descargas— o usa Descarga rápida."
+            );
           }
         } catch (err) {
           if (err?.name === "AbortError") return;
           console.error(err);
 
           if (blob && fileName) {
-            downloadBlob(blob, fileName);
-            showError("No se pudo abrir el menú para compartir. El KMZ se descargó en tu dispositivo.");
+            showInfo("No se abrió el menú para compartir, pero el KMZ quedó preparado y no se perdió.");
+            showKmzRecovery(
+              blob,
+              fileName,
+              "Puedes guardarlo eligiendo la carpeta, reintentar compartir o usar Descarga rápida."
+            );
           } else {
             showError("No fue posible crear el KMZ para compartir.");
           }
@@ -1610,6 +1813,22 @@ ${placemarks}
       els.shareAllBtn.addEventListener("click", shareAllLocations);
       els.kmzBtn.addEventListener("click", downloadKmz);
       els.shareKmzBtn.addEventListener("click", shareKmz);
+      els.saveReadyKmzBtn.addEventListener("click", async () => {
+        if (!state.lastKmzBlob || !state.lastKmzFileName) return;
+        try {
+          await savePreparedKmz(state.lastKmzBlob, state.lastKmzFileName);
+        } catch (error) {
+          console.error(error);
+          showError("No se pudo guardar el KMZ.");
+        }
+      });
+      els.quickDownloadKmzBtn.addEventListener("click", () => {
+        if (!state.lastKmzBlob || !state.lastKmzFileName) return;
+        downloadBlob(state.lastKmzBlob, state.lastKmzFileName);
+        hideKmzRecovery();
+        showInfo(`KMZ descargado como “${state.lastKmzFileName}”. Revisa la carpeta Descargas.`);
+      });
+      els.retryShareKmzBtn.addEventListener("click", retryPreparedKmzShare);
 
       els.photoList.addEventListener("input", event => {
         const nameInput = event.target.closest(".share-name-input");

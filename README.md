@@ -51,3 +51,13 @@ La lectura de fotografías y la creación de archivos se realizan en el disposit
 - Rechaza coordenadas vacías 0,0 y las muestra como fotografías sin GPS.
 - Permite cambiar el orden de las fotografías con los botones Subir y Bajar.
 - El nuevo orden se utiliza en la lista, al compartir y en el archivo KMZ.
+
+
+## Novedades v1.7
+- La información y seguridad se agrupan en una sección compacta desplegable.
+- Los fallos al compartir que terminan en descarga se muestran como aviso informativo, no como error rojo.
+
+
+## Novedades v1.8
+- El botón Guardar KMZ abre el selector del sistema en Descargas cuando el navegador lo permite.
+- Si compartir falla, el KMZ queda listo y aparecen opciones para guardarlo, reintentar o descargarlo rápidamente.
