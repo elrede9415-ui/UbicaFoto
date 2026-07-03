@@ -61,3 +61,9 @@ La lectura de fotografías y la creación de archivos se realizan en el disposit
 ## Novedades v1.8
 - El botón Guardar KMZ abre el selector del sistema en Descargas cuando el navegador lo permite.
 - Si compartir falla, el KMZ queda listo y aparecen opciones para guardarlo, reintentar o descargarlo rápidamente.
+
+
+## Novedades v1.9
+- Botón pequeño para buscar y cargar la versión más reciente de UbicaFoto.
+- Las instrucciones de cada área están ocultas en botones de ayuda con signo de interrogación.
+- Se mantiene la advertencia antes de actualizar cuando hay fotografías cargadas.

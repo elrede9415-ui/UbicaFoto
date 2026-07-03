@@ -79,6 +79,125 @@
     h1 { margin: 0; font-size: clamp(1.45rem, 5vw, 2rem); }
     .subtitle { margin: 3px 0 0; color: var(--muted); }
 
+
+    .header-copy {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .update-app-btn {
+      width: 42px;
+      height: 42px;
+      min-height: 42px;
+      padding: 0;
+      border-radius: 50%;
+      background: #e9f2ef;
+      color: var(--primary-dark);
+      font-size: 1.35rem;
+      flex: 0 0 auto;
+      box-shadow: 0 5px 15px rgba(17, 53, 44, .08);
+    }
+
+    .update-app-btn.updating {
+      animation: update-spin .8s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes update-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .visually-hidden {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+
+    .title-with-help,
+    .subsection-heading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .subsection-heading {
+      margin-top: 14px;
+      color: var(--text);
+      font-size: .98rem;
+      font-weight: 800;
+    }
+
+    .help-btn {
+      width: 28px;
+      height: 28px;
+      min-height: 28px;
+      padding: 0;
+      border: 1px solid #bdd2ca;
+      border-radius: 50%;
+      background: #f1f7f5;
+      color: var(--primary-dark);
+      font-size: .9rem;
+      font-weight: 850;
+      flex: 0 0 auto;
+    }
+
+    .help-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(7, 24, 19, .52);
+      backdrop-filter: blur(2px);
+    }
+
+    .help-modal[hidden] { display: none; }
+
+    .help-card {
+      width: min(480px, 100%);
+      max-height: min(76vh, 620px);
+      overflow: auto;
+      position: relative;
+      border-radius: 18px;
+      background: #fff;
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, .24);
+      padding: 21px;
+    }
+
+    .help-card h3 {
+      margin: 0 40px 11px 0;
+      font-size: 1.13rem;
+    }
+
+    .help-card p {
+      margin: 9px 0 0;
+      color: var(--muted);
+      font-size: .93rem;
+      line-height: 1.52;
+    }
+
+    .help-close-btn {
+      position: absolute;
+      top: 11px;
+      right: 11px;
+      width: 34px;
+      height: 34px;
+      min-height: 34px;
+      padding: 0;
+      border-radius: 50%;
+      background: #f1f4f3;
+      color: #42514c;
+      font-size: 1.25rem;
+    }
+
     .panel {
       background: rgba(255,255,255,.92);
       border: 1px solid var(--border);
@@ -559,13 +678,23 @@
   <main class="app">
     <header>
       <img class="logo" src="icons/icon-192.png" alt="Icono de UbicaFoto" />
-      <div>
+      <div class="header-copy">
         <h1>UbicaFoto</h1>
         <p class="subtitle">Ubica tus fotos, compártelas y expórtalas a Google Earth.</p>
       </div>
+      <button id="updateAppBtn" class="update-app-btn" type="button" aria-label="Actualizar a la versión más reciente" title="Actualizar app">
+        ↻<span class="visually-hidden">Actualizar app</span>
+      </button>
     </header>
 
     <section class="panel">
+      <div class="section-title">
+        <div class="title-with-help">
+          <h2>Trabajo actual</h2>
+          <button class="help-btn" type="button" data-help-key="setup" aria-label="Ayuda para preparar el trabajo">?</button>
+        </div>
+      </div>
+
       <div class="project-row">
         <div>
           <label for="projectName">Nombre del levantamiento o inmueble</label>
@@ -579,24 +708,19 @@
         <div>
           <div class="drop-icon">📷</div>
           <div class="drop-title">Seleccionar archivos de fotografía</div>
-          <div class="drop-help">Se abrirá el gestor de archivos del teléfono. Selecciona los archivos originales de la cámara.</div>
         </div>
       </label>
 
-      <details class="info-details">
-        <summary>ℹ️ Información y seguridad</summary>
-        <div class="info-content">
-          <p>Usa los archivos originales de <b>DCIM/Camera</b>. Puedes cambiar nombres, agregar notas y ordenar las fotografías.</p>
-          <p>🔒 Todo se procesa en este dispositivo; las fotos no se envían a un servidor.</p>
-          <p>🛡️ Para borrar el trabajo actual utiliza <b>Nuevo trabajo</b>. Las coordenadas vacías 0,0 se marcan como “Sin GPS”.</p>
-        </div>
-      </details>
+
+      <div class="subsection-heading">
+        <span>Archivo KMZ</span>
+        <button class="help-btn" type="button" data-help-key="kmz" aria-label="Ayuda sobre el archivo KMZ">?</button>
+      </div>
 
       <label class="kmz-option" for="includePhotosKmz">
         <input id="includePhotosKmz" type="checkbox" checked />
         <span>
           Incluir fotos dentro del KMZ
-          <small>Desactívalo para crear un archivo más ligero.</small>
         </span>
       </label>
 
@@ -635,7 +759,10 @@
 
     <section class="panel">
       <div class="section-title">
-        <h2>Mapa de ubicaciones</h2>
+        <div class="title-with-help">
+          <h2>Mapa de ubicaciones</h2>
+          <button class="help-btn" type="button" data-help-key="map" aria-label="Ayuda sobre el mapa">?</button>
+        </div>
         <span class="count-pill" id="mapCount">0 puntos</span>
       </div>
       <div id="map"></div>
@@ -643,15 +770,26 @@
 
     <section class="panel">
       <div class="section-title">
-        <h2>Fotografías procesadas</h2>
+        <div class="title-with-help">
+          <h2>Fotografías procesadas</h2>
+          <button class="help-btn" type="button" data-help-key="photos" aria-label="Ayuda sobre las fotografías">?</button>
+        </div>
         <span class="count-pill" id="listCount">0 fotos</span>
       </div>
       <div id="emptyState" class="empty">Todavía no has seleccionado archivos de fotografía.</div>
       <div id="photoList" class="photo-list"></div>
     </section>
 
-    <footer>UbicaFoto · Versión 1.8</footer>
+    <footer>UbicaFoto · Versión 1.9</footer>
   </main>
+
+  <div id="helpModal" class="help-modal" hidden role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="help-card">
+      <button id="helpCloseBtn" class="help-close-btn" type="button" aria-label="Cerrar ayuda">×</button>
+      <h3 id="helpTitle">Ayuda</h3>
+      <div id="helpBody"></div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -668,6 +806,8 @@
         markerLayer: null,
         markersById: new Map(),
         processing: false,
+        allowPageExit: false,
+        updatingApp: false,
         lastKmzBlob: null,
         lastKmzFileName: ""
       };
@@ -677,6 +817,11 @@
         dropzone: document.getElementById("dropzone"),
         projectName: document.getElementById("projectName"),
         clearBtn: document.getElementById("clearBtn"),
+        updateAppBtn: document.getElementById("updateAppBtn"),
+        helpModal: document.getElementById("helpModal"),
+        helpTitle: document.getElementById("helpTitle"),
+        helpBody: document.getElementById("helpBody"),
+        helpCloseBtn: document.getElementById("helpCloseBtn"),
         kmzBtn: document.getElementById("kmzBtn"),
         shareKmzBtn: document.getElementById("shareKmzBtn"),
         fitBtn: document.getElementById("fitBtn"),
@@ -707,6 +852,112 @@
       }).addTo(map);
 
       state.markerLayer = L.featureGroup().addTo(map);
+
+      const HELP_CONTENT = {
+        setup: {
+          title: "Preparar el trabajo",
+          html: `
+            <p>Escribe el nombre del inmueble o levantamiento y selecciona los archivos originales desde <b>DCIM/Camera</b>. Las imágenes reenviadas por WhatsApp pueden perder el GPS.</p>
+            <p>Las fotos se procesan únicamente en este dispositivo. <b>Nuevo trabajo</b> borra la lista actual, y la app rechaza coordenadas vacías 0,0.</p>`
+        },
+        kmz: {
+          title: "Guardar y compartir el KMZ",
+          html: `
+            <p>Activa <b>Incluir fotos dentro del KMZ</b> para ver cada imagen al abrir su marcador en Google Earth. Desactívalo para obtener un archivo mucho más ligero.</p>
+            <p><b>Guardar KMZ</b> permite elegir dónde conservarlo. <b>Compartir KMZ</b> intenta abrir el menú del teléfono; si el sistema no acepta el archivo, la app ofrece guardarlo o reintentar.</p>`
+        },
+        map: {
+          title: "Mapa de ubicaciones",
+          html: `
+            <p>El mapa muestra únicamente las fotografías con coordenadas válidas. Toca un marcador para ver su nombre, coordenadas y enlace a Google Maps.</p>
+            <p><b>Ver todos los puntos</b> ajusta el mapa para mostrar el levantamiento completo.</p>`
+        },
+        photos: {
+          title: "Editar y ordenar fotografías",
+          html: `
+            <p>Puedes cambiar el nombre de cada punto, agregar una nota y mover las fotos con los botones de subir o bajar.</p>
+            <p>Ese mismo orden, nombre y nota se utilizarán al compartir las ubicaciones y al crear el KMZ.</p>`
+        }
+      };
+
+      function openHelp(key) {
+        const content = HELP_CONTENT[key];
+        if (!content) return;
+        els.helpTitle.textContent = content.title;
+        els.helpBody.innerHTML = content.html;
+        els.helpModal.hidden = false;
+        document.body.style.overflow = "hidden";
+        els.helpCloseBtn.focus();
+      }
+
+      function closeHelp() {
+        els.helpModal.hidden = true;
+        document.body.style.overflow = "";
+      }
+
+      function waitForWorkerState(worker, desiredState, timeoutMs = 3500) {
+        if (!worker || worker.state === desiredState) return Promise.resolve();
+        return new Promise(resolve => {
+          const timeout = setTimeout(resolve, timeoutMs);
+          worker.addEventListener("statechange", () => {
+            if (worker.state === desiredState || worker.state === "redundant") {
+              clearTimeout(timeout);
+              resolve();
+            }
+          });
+        });
+      }
+
+      async function updateToLatestVersion() {
+        if (state.updatingApp) return;
+
+        if (state.photos.length) {
+          const confirmed = window.confirm(
+            "Actualizar recargará UbicaFoto y se perderá el trabajo actual. ¿Deseas continuar?"
+          );
+          if (!confirmed) return;
+        }
+
+        state.updatingApp = true;
+        els.updateAppBtn.classList.add("updating");
+        els.updateAppBtn.disabled = true;
+        clearError();
+        showInfo("Buscando la versión más reciente de UbicaFoto…");
+
+        try {
+          if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+            let registration = await navigator.serviceWorker.getRegistration("./");
+            if (!registration) registration = await navigator.serviceWorker.register("./sw.js");
+            await registration.update();
+
+            const worker = registration.waiting || registration.installing;
+            if (registration.waiting) {
+              registration.waiting.postMessage({ type: "SKIP_WAITING" });
+            }
+            if (worker) await waitForWorkerState(worker, "activated");
+          }
+
+          if ("caches" in window) {
+            const cacheKeys = await caches.keys();
+            await Promise.all(
+              cacheKeys
+                .filter(key => key.startsWith("ubicafoto-"))
+                .map(key => caches.delete(key))
+            );
+          }
+
+          state.allowPageExit = true;
+          const freshUrl = new URL(window.location.href);
+          freshUrl.searchParams.set("actualizar", Date.now().toString());
+          window.location.replace(freshUrl.href);
+        } catch (error) {
+          console.error("No se pudo actualizar UbicaFoto:", error);
+          showError("No fue posible buscar la actualización. Revisa tu conexión e inténtalo otra vez.");
+          state.updatingApp = false;
+          els.updateAppBtn.classList.remove("updating");
+          els.updateAppBtn.disabled = false;
+        }
+      }
 
       function uniqueId() {
         return crypto.randomUUID ? crypto.randomUUID() :
@@ -1791,6 +2042,21 @@ ${placemarks}
         }
       }
 
+      els.updateAppBtn.addEventListener("click", updateToLatestVersion);
+
+      document.addEventListener("click", event => {
+        const helpButton = event.target.closest(".help-btn[data-help-key]");
+        if (helpButton) openHelp(helpButton.dataset.helpKey);
+      });
+
+      els.helpCloseBtn.addEventListener("click", closeHelp);
+      els.helpModal.addEventListener("click", event => {
+        if (event.target === els.helpModal) closeHelp();
+      });
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && !els.helpModal.hidden) closeHelp();
+      });
+
       els.input.addEventListener("change", event => processFiles(event.target.files));
 
       ["dragenter", "dragover"].forEach(type => {
@@ -1909,7 +2175,7 @@ ${placemarks}
 
       // Evita perder el levantamiento por actualizar accidentalmente.
       window.addEventListener("beforeunload", event => {
-        if (!state.photos.length) return;
+        if (state.allowPageExit || !state.photos.length) return;
         event.preventDefault();
         event.returnValue = "";
       });
@@ -1930,6 +2196,12 @@ ${placemarks}
       window.addEventListener("resize", () => map.invalidateSize());
       setTimeout(() => map.invalidateSize(), 250);
       render();
+
+      const currentUrl = new URL(window.location.href);
+      if (currentUrl.searchParams.has("actualizar")) {
+        currentUrl.searchParams.delete("actualizar");
+        window.history.replaceState({}, "", currentUrl.href);
+      }
     })();
   </script>
 
